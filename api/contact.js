@@ -1,20 +1,59 @@
+import { buffer as readStreamBuffer } from 'node:stream/consumers';
+
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const RESEND_EMAILS_URL = 'https://api.resend.com/emails';
+
+/** Plain Node `http` has no `res.status().json()`; Vercel adds helpers. Use this everywhere. */
+function json(res, status, data) {
+  res.statusCode = status;
+  if (!res.getHeader('Content-Type')) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  }
+  res.end(JSON.stringify(data));
+}
+
+/**
+ * Vercel may leave the body on the stream, set req.body to {}, or parse JSON.
+ * Prefer a non-empty parsed object; otherwise read the full stream once.
+ */
+async function readJsonBody(req) {
+  if (req.body != null && typeof req.body === 'object' && !Buffer.isBuffer(req.body) && !Array.isArray(req.body)) {
+    const keys = Object.keys(req.body);
+    if (keys.length > 0) return req.body;
+  }
+  if (typeof req.body === 'string' && req.body.length > 0) {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+    try {
+      return JSON.parse(req.body.toString('utf8'));
+    } catch {
+      return {};
+    }
+  }
+  try {
+    const raw = await readStreamBuffer(req);
+    const s = raw.toString('utf8');
+    return s ? JSON.parse(s) : {};
+  } catch {
+    return {};
+  }
+}
 
 function sanitize(value, maxLength = 2000) {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, maxLength);
 }
 
-async function verifyTurnstile({ token, secret, remoteIp }) {
+async function verifyTurnstile({ token, secret }) {
   const body = new URLSearchParams({
     secret,
     response: token,
   });
-
-  if (remoteIp) {
-    body.set('remoteip', remoteIp);
-  }
 
   const response = await fetch(TURNSTILE_VERIFY_URL, {
     method: 'POST',
@@ -62,7 +101,7 @@ async function sendWithResend({ apiKey, from, to, subject, text, replyTo }) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ ok: false, message: 'Method not allowed' });
+    return json(res, 405, { ok: false, message: 'Method not allowed' });
   }
 
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
@@ -71,10 +110,10 @@ export default async function handler(req, res) {
   const notificationEmail = process.env.FORM_NOTIFICATION_EMAIL;
 
   if (!turnstileSecret || !resendApiKey || !resendFrom || !notificationEmail) {
-    return res.status(500).json({ ok: false, message: 'Server is not configured' });
+    return json(res, 500, { ok: false, message: 'Server is not configured' });
   }
 
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+  const body = await readJsonBody(req);
 
   const nombre = sanitize(body.nombre, 120);
   const email = sanitize(body.email, 160);
@@ -82,27 +121,20 @@ export default async function handler(req, res) {
   const telefono = sanitize(body.telefono, 60);
   const servicio = sanitize(body.servicio, 120);
   const mensaje = sanitize(body.mensaje, 4000);
-  const turnstileToken = sanitize(body.turnstileToken, 1000);
+  // Response tokens are often 1–3k+ chars; truncating breaks siteverify (invalid-input-response).
+  const turnstileToken = sanitize(body.turnstileToken, 32768);
 
   if (!nombre || !email || !mensaje || !turnstileToken) {
-    return res.status(400).json({ ok: false, message: 'Missing required fields' });
+    return json(res, 400, { ok: false, message: 'Missing required fields' });
   }
-
-  const ipHeader = req.headers['x-forwarded-for'];
-  const remoteIp = Array.isArray(ipHeader)
-    ? ipHeader[0]
-    : typeof ipHeader === 'string'
-      ? ipHeader.split(',')[0]?.trim()
-      : undefined;
 
   const verification = await verifyTurnstile({
     token: turnstileToken,
     secret: turnstileSecret,
-    remoteIp,
   });
 
   if (!verification.success) {
-    return res.status(400).json({
+    return json(res, 400, {
       ok: false,
       message: 'Captcha verification failed',
       code: verification.reason,
@@ -135,8 +167,11 @@ export default async function handler(req, res) {
   });
 
   if (!sent.success) {
-    return res.status(502).json({ ok: false, message: 'Failed to send email' });
+    return json(res, 502, {
+      ok: false,
+      message: sent.message || 'Failed to send email',
+    });
   }
 
-  return res.status(200).json({ ok: true });
+  return json(res, 200, { ok: true });
 }

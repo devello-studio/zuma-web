@@ -110,7 +110,9 @@ export function Contacto() {
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.message || 'Could not submit form');
+        const base = payload?.message || 'Could not submit form';
+        const detail = payload?.code ? `${base} (${payload.code})` : base;
+        throw new Error(detail);
       }
 
       setSubmitted(true);
@@ -123,7 +125,11 @@ export function Contacto() {
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage('We could not send your message. Please try again in a moment.');
+      const fallback = 'We could not send your message. Please try again in a moment.';
+      const msg = error instanceof Error ? error.message : '';
+      setErrorMessage(
+        msg && msg !== 'Could not submit form' ? msg : fallback,
+      );
     } finally {
       setSubmitting(false);
     }

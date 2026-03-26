@@ -5,6 +5,11 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+# Public Turnstile site key (browser). .env is not copied into the image (.dockerignore).
+ARG VITE_TURNSTILE_SITE_KEY
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
+
 RUN npm run build
 
 FROM nginx:1.27-alpine AS production

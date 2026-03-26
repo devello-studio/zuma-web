@@ -1,8 +1,27 @@
 name: zuma-web
 
 services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM}
+      FORM_NOTIFICATION_EMAIL: ${FORM_NOTIFICATION_EMAIL}
+    expose:
+      - "3000"
+    restart: unless-stopped
+
   web:
-    build: .
+    build:
+      context: .
+      args:
+        # Loaded from project .env when you run `docker compose build` (Compose interpolates ${...})
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY}
     ports:
       - "8080:80"
+    depends_on:
+      - api
     restart: unless-stopped
