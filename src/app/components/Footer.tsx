@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router';
 import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
@@ -68,16 +68,18 @@ export function Footer() {
               </li>
               <li className="flex items-start space-x-2">
                 <Mail className="w-4 h-4 mt-1 text-orange-600 dark:text-orange-500 flex-shrink-0" />
-                <a href="mailto:info@zumasolutions.com" className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
-                  info@zumasolutions.com
+                <a href="mailto:info@zumasolutions.io" className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
+                  info@zumasolutions.io
                 </a>
               </li>
+              {/* Phone — uncomment when we have a working number (re-add `Phone` to lucide-react imports above).
               <li className="flex items-start space-x-2">
                 <Phone className="w-4 h-4 mt-1 text-orange-600 dark:text-orange-500 flex-shrink-0" />
                 <a href="tel:+50612345678" className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
                   +506 1234 5678
                 </a>
               </li>
+              */}
             </ul>
           </div>
         </div>

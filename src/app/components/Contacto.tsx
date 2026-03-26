@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone, Send } from 'lucide-react';
+import { Mail, MapPin, Send } from 'lucide-react';
 import { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -83,13 +83,14 @@ export function Contacto() {
                   <div>
                     <h3 className="text-lg mb-1">{t('contact.info.email')}</h3>
                     <a
-                      href="mailto:info@zumasolutions.com"
+                      href="mailto:info@zumasolutions.io"
                       className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors"
                     >
-                      info@zumasolutions.com
+                      info@zumasolutions.io
                     </a>
                   </div>
                 </div>
+                {/* Phone — uncomment when we have a working number (re-add `Phone` to lucide-react imports above).
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Phone className="w-6 h-6 text-orange-600 dark:text-orange-500" />
@@ -104,6 +105,7 @@ export function Contacto() {
                     </a>
                   </div>
                 </div>
+                */}
               </div>
             </div>
 
