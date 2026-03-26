@@ -1,9 +1,12 @@
 import { Mail, MapPin, Send } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export function Contacto() {
   const { t } = useLanguage();
+  const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -15,23 +18,115 @@ export function Contacto() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real application, you would send this data to a backend
-    console.log('Form submitted:', formData);
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({
-        nombre: '',
-        email: '',
-        empresa: '',
-        telefono: '',
-        servicio: '',
-        mensaje: '',
+  useEffect(() => {
+    if (!turnstileSiteKey) return;
+
+    const initializeTurnstile = () => {
+      const turnstile = (window as any).turnstile;
+      if (!turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
+
+      turnstileWidgetIdRef.current = turnstile.render(turnstileContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        theme: 'auto',
+        callback: (token: string) => {
+          setTurnstileToken(token);
+          setErrorMessage('');
+        },
+        'expired-callback': () => {
+          setTurnstileToken('');
+        },
+        'error-callback': () => {
+          setTurnstileToken('');
+          setErrorMessage('Captcha validation failed. Please retry.');
+        },
       });
-    }, 3000);
+    };
+
+    if ((window as any).turnstile) {
+      initializeTurnstile();
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"]'
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener('load', initializeTurnstile, { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.addEventListener('load', initializeTurnstile, { once: true });
+    document.head.appendChild(script);
+  }, [turnstileSiteKey]);
+
+  const resetForm = () => {
+    setFormData({
+      nombre: '',
+      email: '',
+      empresa: '',
+      telefono: '',
+      servicio: '',
+      mensaje: '',
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!turnstileSiteKey) {
+      setErrorMessage('Form is unavailable right now. Please try again later.');
+      return;
+    }
+
+    if (!turnstileToken) {
+      setErrorMessage('Please complete the captcha before sending.');
+      return;
+    }
+
+    setSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          turnstileToken,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || 'Could not submit form');
+      }
+
+      setSubmitted(true);
+      resetForm();
+      setTurnstileToken('');
+      setTimeout(() => setSubmitted(false), 4000);
+      const turnstile = (window as any).turnstile;
+      if (turnstile && turnstileWidgetIdRef.current) {
+        turnstile.reset(turnstileWidgetIdRef.current);
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage('We could not send your message. Please try again in a moment.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -118,6 +213,11 @@ export function Contacto() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {errorMessage ? (
+                    <div className="bg-red-100 dark:bg-red-950 border border-red-500 text-red-800 dark:text-red-200 px-6 py-4 rounded-lg">
+                      <p className="font-semibold">{errorMessage}</p>
+                    </div>
+                  ) : null}
                   <div>
                     <label htmlFor="nombre" className="block text-sm mb-2">
                       {t('contact.form.name')}
@@ -195,12 +295,22 @@ export function Contacto() {
                       className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-orange-600"
                     />
                   </div>
+                  <div>
+                    {turnstileSiteKey ? (
+                      <div ref={turnstileContainerRef} />
+                    ) : (
+                      <p className="text-sm text-red-600 dark:text-red-400">
+                        Captcha is not configured.
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="submit"
-                    className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+                    disabled={submitting || !turnstileToken}
+                    className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
                   >
                     <Send className="w-5 h-5" />
-                    <span>{t('contact.form.submit')}</span>
+                    <span>{submitting ? 'Sending...' : t('contact.form.submit')}</span>
                   </button>
                 </form>
               )}
