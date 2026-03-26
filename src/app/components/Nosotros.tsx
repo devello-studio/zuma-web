@@ -1,5 +1,5 @@
 import { Target, Eye, Heart, Globe, Award, Users } from 'lucide-react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from './ImageWithFallback';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export function Nosotros() {

@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { ArrowRight, Code, TrendingUp, Brain, Shield } from 'lucide-react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from './ImageWithFallback';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export function Home() {
