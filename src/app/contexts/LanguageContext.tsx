@@ -309,6 +309,13 @@ const translations: Record<Language, any> = {
     leadCapture: {
       title: 'Consulta Gratuita',
       subtitle: 'Obtén una evaluación personalizada de tus necesidades empresariales',
+      stepProgress: 'Paso {n} de {m}',
+      errors: {
+        captchaUnavailable: 'El formulario no está disponible en este momento. Intenta más tarde.',
+        captchaRequired: 'Completa la verificación antes de enviar.',
+        captchaFailed: 'Falló la verificación. Intenta de nuevo.',
+        submitFailed: 'No pudimos enviar tu solicitud. Intenta de nuevo en un momento.',
+      },
       step1: {
         title: 'Información de Contacto',
         name: 'Nombre Completo',
@@ -366,6 +373,7 @@ const translations: Record<Language, any> = {
         },
         notes: 'Notas Adicionales',
         notesPlaceholder: 'Cuéntanos más sobre tu proyecto...',
+        captcha: 'Verificación de seguridad',
       },
       buttons: {
         next: 'Siguiente',
@@ -625,6 +633,13 @@ const translations: Record<Language, any> = {
     leadCapture: {
       title: 'Free Consultation',
       subtitle: 'Get a personalized assessment of your business needs',
+      stepProgress: 'Step {n} of {m}',
+      errors: {
+        captchaUnavailable: 'This form is unavailable right now. Please try again later.',
+        captchaRequired: 'Please complete the verification before submitting.',
+        captchaFailed: 'Verification failed. Please try again.',
+        submitFailed: 'We could not submit your request. Please try again in a moment.',
+      },
       step1: {
         title: 'Contact Information',
         name: 'Full Name',
@@ -682,6 +697,7 @@ const translations: Record<Language, any> = {
         },
         notes: 'Additional Notes',
         notesPlaceholder: 'Tell us more about your project...',
+        captcha: 'Security verification',
       },
       buttons: {
         next: 'Next',

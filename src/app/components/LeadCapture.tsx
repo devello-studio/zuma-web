@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -52,6 +52,122 @@ export function LeadCapture() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+  const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
+
+  /**
+   * Turnstile must mount after the step-3 container exists. A single init call often ran while
+   * `turnstileContainerRef` was still null (AnimatePresence / motion), so nothing rendered.
+   * Also: if the api.js tag exists but `load` already fired, listening for `load` never runs init.
+   */
+  useLayoutEffect(() => {
+    if (currentStep !== 3 || !turnstileSiteKey) return;
+
+    let cancelled = false;
+    let rafId = 0;
+    let pollId = 0;
+
+    const renderWidget = (): boolean => {
+      if (cancelled) return true;
+      const turnstile = (window as any).turnstile;
+      const el = turnstileContainerRef.current;
+      if (!turnstile || !el || !el.isConnected) return false;
+      if (turnstileWidgetIdRef.current) return true;
+      try {
+        turnstileWidgetIdRef.current = turnstile.render(el, {
+          sitekey: turnstileSiteKey,
+          theme: 'auto',
+          callback: (token: string) => {
+            setTurnstileToken(token);
+            setSubmitError('');
+          },
+          'expired-callback': () => setTurnstileToken(''),
+          'error-callback': () => {
+            setTurnstileToken('');
+            setSubmitError(t('leadCapture.errors.captchaFailed'));
+          },
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const scheduleUntilRendered = () => {
+      let frames = 0;
+      const maxFrames = 120;
+      const tick = () => {
+        if (cancelled) return;
+        if (renderWidget()) return;
+        frames += 1;
+        if (frames >= maxFrames) return;
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const onApiReady = () => {
+      if (pollId) {
+        window.clearInterval(pollId);
+        pollId = 0;
+      }
+      if (cancelled) return;
+      scheduleUntilRendered();
+    };
+
+    if ((window as any).turnstile) {
+      onApiReady();
+    } else {
+      const existingScript = document.querySelector<HTMLScriptElement>(
+        'script[src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"]'
+      );
+      if (existingScript) {
+        existingScript.addEventListener('load', onApiReady, { once: true });
+        pollId = window.setInterval(() => {
+          if ((window as any).turnstile) {
+            window.clearInterval(pollId);
+            pollId = 0;
+            onApiReady();
+          }
+        }, 50);
+        window.setTimeout(() => {
+          if (pollId) {
+            window.clearInterval(pollId);
+            pollId = 0;
+          }
+        }, 15000);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.addEventListener('load', onApiReady, { once: true });
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (pollId) window.clearInterval(pollId);
+      const turnstile = (window as any).turnstile;
+      const id = turnstileWidgetIdRef.current;
+      if (turnstile && id) {
+        try {
+          turnstile.remove(id);
+        } catch {
+          /* ignore */
+        }
+      }
+      turnstileWidgetIdRef.current = null;
+      setTurnstileToken('');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `t` changes identity each render; only re-init when step/siteKey changes
+  }, [currentStep, turnstileSiteKey]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -85,17 +201,109 @@ export function LeadCapture() {
   };
 
   const handleBack = () => {
+    if (currentStep === 3) {
+      const turnstile = (window as any).turnstile;
+      const id = turnstileWidgetIdRef.current;
+      if (turnstile && id) {
+        try {
+          turnstile.remove(id);
+        } catch {
+          /* ignore */
+        }
+      }
+      turnstileWidgetIdRef.current = null;
+      setTurnstileToken('');
+    }
     setCurrentStep((prev) => Math.max(prev - 1, 1));
     setErrors({});
   };
 
-  const handleSubmit = () => {
-    if (validateStep(currentStep)) {
-      // In a real app, send data to backend
-      console.log('Form submitted:', formData);
-      // Store in sessionStorage for thank you page
+  const readTurnstileToken = async () => {
+    // Turnstile can show a green check before the token is available to JS callbacks.
+    // Retry briefly when the user presses submit.
+    const turnstile = (window as any).turnstile;
+    const id = turnstileWidgetIdRef.current;
+    if (!turnstile || !id || typeof turnstile.getResponse !== 'function') return '';
+
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const token = turnstile.getResponse(id);
+        if (token) return token;
+      } catch {
+        // ignore
+      }
+      await sleep(300);
+    }
+
+    return '';
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep(currentStep)) return;
+
+    if (!turnstileSiteKey) {
+      setSubmitError(t('leadCapture.errors.captchaUnavailable'));
+      return;
+    }
+
+    // In some cases the Turnstile callback may be delayed; read the token directly.
+    let tokenToSend = turnstileToken;
+    if (!tokenToSend) {
+      tokenToSend = await readTurnstileToken();
+      if (tokenToSend) setTurnstileToken(tokenToSend);
+    }
+
+    if (!tokenToSend) {
+      setSubmitError(t('leadCapture.errors.captchaRequired'));
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError('');
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formType: 'consulta-gratuita',
+          nombre: formData.nombre,
+          email: formData.email,
+          telefono: formData.telefono,
+          empresa: formData.empresa,
+          industria: formData.industria,
+          empleados: formData.empleados,
+          currentErp: formData.currentErp,
+          erpName: formData.erpName,
+          serviciosInteres: formData.serviciosInteres,
+          timeline: formData.timeline,
+          presupuesto: formData.presupuesto,
+          notas: formData.notas,
+          turnstileToken: tokenToSend,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload?.ok) {
+        const base = payload?.message || 'Could not submit form';
+        const detail = payload?.code ? `${base} (${payload.code})` : base;
+        throw new Error(detail);
+      }
+
       sessionStorage.setItem('leadFormData', JSON.stringify(formData));
       navigate('/gracias');
+    } catch (error) {
+      console.error(error);
+      const fallback = t('leadCapture.errors.submitFailed');
+      const msg = error instanceof Error ? error.message : '';
+      setSubmitError(msg && msg !== 'Could not submit form' ? msg : fallback);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -141,7 +349,9 @@ export function LeadCapture() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              Step {currentStep} {t('nav.about')} {totalSteps}
+              {String(t('leadCapture.stepProgress'))
+                .replace('{n}', String(currentStep))
+                .replace('{m}', String(totalSteps))}
             </span>
             <span className="text-sm text-gray-600 dark:text-gray-400">{Math.round(progress)}%</span>
           </div>
@@ -421,16 +631,31 @@ export function LeadCapture() {
                       className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-orange-600"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm mb-2">{t('leadCapture.step3.captcha')}</label>
+                    {turnstileSiteKey ? (
+                      <div ref={turnstileContainerRef} className="min-h-[70px]" />
+                    ) : (
+                      <p className="text-sm text-red-600 dark:text-red-400">
+                        {t('leadCapture.errors.captchaUnavailable')}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
+          {submitError && (
+            <p className="text-sm text-red-600 dark:text-red-400 mt-6">{submitError}</p>
+          )}
+
           {/* Navigation Buttons */}
           <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
             <button
               onClick={handleBack}
-              disabled={currentStep === 1}
+              disabled={currentStep === 1 || submitting}
               className="inline-flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:text-orange-600 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
@@ -439,18 +664,22 @@ export function LeadCapture() {
 
             {currentStep < totalSteps ? (
               <button
+                type="button"
                 onClick={handleNext}
-                className="inline-flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                disabled={submitting}
+                className="inline-flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 {t('leadCapture.buttons.next')}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleSubmit}
-                className="inline-flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                disabled={submitting || !turnstileSiteKey}
+                className="inline-flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
-                {t('leadCapture.buttons.submit')}
+                {submitting ? t('leadCapture.buttons.submitting') : t('leadCapture.buttons.submit')}
                 <CheckCircle2 className="w-5 h-5 ml-2" />
               </button>
             )}

@@ -49,6 +49,15 @@ function sanitize(value, maxLength = 2000) {
   return value.trim().slice(0, maxLength);
 }
 
+function sanitizeStringArray(value, maxItems = 24, maxEach = 64) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((x) => typeof x === 'string')
+    .slice(0, maxItems)
+    .map((s) => s.trim().slice(0, maxEach))
+    .filter(Boolean);
+}
+
 async function verifyTurnstile({ token, secret }) {
   const body = new URLSearchParams({
     secret,
@@ -115,6 +124,9 @@ export default async function handler(req, res) {
 
   const body = await readJsonBody(req);
 
+  const formType = sanitize(body.formType, 48) || 'contact';
+  const isConsulta = formType === 'consulta-gratuita';
+
   const nombre = sanitize(body.nombre, 120);
   const email = sanitize(body.email, 160);
   const empresa = sanitize(body.empresa, 160);
@@ -124,7 +136,20 @@ export default async function handler(req, res) {
   // Response tokens are often 1–3k+ chars; truncating breaks siteverify (invalid-input-response).
   const turnstileToken = sanitize(body.turnstileToken, 32768);
 
-  if (!nombre || !email || !mensaje || !turnstileToken) {
+  const industria = sanitize(body.industria, 80);
+  const empleados = sanitize(body.empleados, 40);
+  const currentErp = sanitize(body.currentErp, 8);
+  const erpName = sanitize(body.erpName, 120);
+  const serviciosInteres = sanitizeStringArray(body.serviciosInteres);
+  const timeline = sanitize(body.timeline, 40);
+  const presupuesto = sanitize(body.presupuesto, 40);
+  const notas = sanitize(body.notas, 4000);
+
+  if (isConsulta) {
+    if (!nombre || !email || !empresa || !turnstileToken) {
+      return json(res, 400, { ok: false, message: 'Missing required fields' });
+    }
+  } else if (!nombre || !email || !mensaje || !turnstileToken) {
     return json(res, 400, { ok: false, message: 'Missing required fields' });
   }
 
@@ -141,21 +166,47 @@ export default async function handler(req, res) {
     });
   }
 
-  const subject = `[Zuma Contact] ${nombre}${servicio ? ` - ${servicio}` : ''}`;
-  const text = [
-    'New contact submission',
-    '',
-    `Name: ${nombre}`,
-    `Email: ${email}`,
-    `Company: ${empresa || 'N/A'}`,
-    `Phone: ${telefono || 'N/A'}`,
-    `Service: ${servicio || 'N/A'}`,
-    '',
-    'Message:',
-    mensaje,
-    '',
-    `Submitted at: ${new Date().toISOString()}`,
-  ].join('\n');
+  let subject;
+  let text;
+
+  if (isConsulta) {
+    subject = `[Zuma Consulta gratuita] ${nombre} — ${empresa}`;
+    text = [
+      'New free consultation lead (consulta gratuita)',
+      '',
+      `Name: ${nombre}`,
+      `Email: ${email}`,
+      `Phone: ${telefono || 'N/A'}`,
+      `Company: ${empresa}`,
+      `Industry: ${industria || 'N/A'}`,
+      `Employees: ${empleados || 'N/A'}`,
+      `Current ERP: ${currentErp || 'N/A'}${currentErp === 'yes' && erpName ? ` (${erpName})` : ''}`,
+      `Services of interest: ${serviciosInteres.length ? serviciosInteres.join(', ') : 'N/A'}`,
+      `Timeline: ${timeline || 'N/A'}`,
+      `Budget: ${presupuesto || 'N/A'}`,
+      '',
+      'Notes:',
+      notas || 'N/A',
+      '',
+      `Submitted at: ${new Date().toISOString()}`,
+    ].join('\n');
+  } else {
+    subject = `[Zuma Contact] ${nombre}${servicio ? ` - ${servicio}` : ''}`;
+    text = [
+      'New contact submission',
+      '',
+      `Name: ${nombre}`,
+      `Email: ${email}`,
+      `Company: ${empresa || 'N/A'}`,
+      `Phone: ${telefono || 'N/A'}`,
+      `Service: ${servicio || 'N/A'}`,
+      '',
+      'Message:',
+      mensaje,
+      '',
+      `Submitted at: ${new Date().toISOString()}`,
+    ].join('\n');
+  }
 
   const sent = await sendWithResend({
     apiKey: resendApiKey,
