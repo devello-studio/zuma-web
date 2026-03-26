@@ -30,5 +30,8 @@ coverage/
 # Vite
 *.local
 
+# Vercel
+.vercel
+
 # TypeScript (if added later)
 *.tsbuildinfo
