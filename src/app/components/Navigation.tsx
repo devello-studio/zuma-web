@@ -2,8 +2,8 @@ import { Link, useLocation } from 'react-router';
 import { Menu, X, Globe } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
-import { LogoLight } from './LogoLight';
-import { LogoDark } from './LogoDark';
+import { LogoLight, LogoMarkLight } from './LogoLight';
+import { LogoDark, LogoMarkDark } from './LogoDark';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export function Navigation() {
@@ -39,9 +39,15 @@ export function Navigation() {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             {mounted && resolvedTheme === 'dark' ? (
-              <LogoDark className="h-10 w-auto" />
+              <>
+                <LogoMarkDark className="h-8 w-auto shrink-0 md:hidden" />
+                <LogoDark className="hidden h-10 w-auto shrink-0 md:block" />
+              </>
             ) : (
-              <LogoLight className="h-10 w-auto" />
+              <>
+                <LogoMarkLight className="h-8 w-auto shrink-0 md:hidden" />
+                <LogoLight className="hidden h-10 w-auto shrink-0 md:block" />
+              </>
             )}
           </Link>
 

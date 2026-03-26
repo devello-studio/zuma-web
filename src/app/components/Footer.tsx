@@ -2,8 +2,8 @@ import { Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router';
 import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
-import { LogoLight } from './LogoLight';
-import { LogoDark } from './LogoDark';
+import { LogoLight, LogoMarkLight } from './LogoLight';
+import { LogoDark, LogoMarkDark } from './LogoDark';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export function Footer() {
@@ -22,9 +22,15 @@ export function Footer() {
           {/* Logo & Description */}
           <div>
             {mounted && resolvedTheme === 'dark' ? (
-              <LogoDark className="h-10 w-auto mb-4" />
+              <>
+                <LogoMarkDark className="mb-4 h-8 w-auto md:hidden" />
+                <LogoDark className="mb-4 hidden h-10 w-auto md:block" />
+              </>
             ) : (
-              <LogoLight className="h-10 w-auto mb-4" />
+              <>
+                <LogoMarkLight className="mb-4 h-8 w-auto md:hidden" />
+                <LogoLight className="mb-4 hidden h-10 w-auto md:block" />
+              </>
             )}
             <p className="text-gray-600 dark:text-gray-400 text-sm">
               {t('footer.companyDesc')}

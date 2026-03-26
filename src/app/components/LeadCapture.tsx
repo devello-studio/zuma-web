@@ -10,8 +10,8 @@ import {
   Briefcase,
   CheckCircle2
 } from 'lucide-react';
-import { LogoLight } from './LogoLight';
-import { LogoDark } from './LogoDark';
+import { LogoLight, LogoMarkLight } from './LogoLight';
+import { LogoDark, LogoMarkDark } from './LogoDark';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -116,9 +116,15 @@ export function LeadCapture() {
       <div className="py-6 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           {resolvedTheme === 'dark' ? (
-            <LogoDark className="h-10 w-auto" />
+            <>
+              <LogoMarkDark className="h-8 w-auto md:hidden" />
+              <LogoDark className="hidden h-10 w-auto md:block" />
+            </>
           ) : (
-            <LogoLight className="h-10 w-auto" />
+            <>
+              <LogoMarkLight className="h-8 w-auto md:hidden" />
+              <LogoLight className="hidden h-10 w-auto md:block" />
+            </>
           )}
         </div>
       </div>
