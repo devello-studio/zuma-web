@@ -33,5 +33,8 @@ coverage/
 # Vercel
 .vercel
 
+# Local documentation (not tracked)
+docs/
+
 # TypeScript (if added later)
 *.tsbuildinfo
