@@ -255,6 +255,21 @@ export function Contacto() {
                     />
                   </div>
                   <div>
+                    <label htmlFor="telefono" className="block text-sm mb-2">
+                      {t('contact.form.phone')}
+                    </label>
+                    <input
+                      type="tel"
+                      id="telefono"
+                      name="telefono"
+                      autoComplete="tel"
+                      value={formData.telefono}
+                      onChange={handleChange}
+                      placeholder={t('contact.form.phonePlaceholder')}
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-orange-600"
+                    />
+                  </div>
+                  <div>
                     <label htmlFor="empresa" className="block text-sm mb-2">
                       {t('contact.form.company')}
                     </label>
