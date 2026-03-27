@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -14,6 +14,8 @@ import { LogoLight, LogoMarkLight } from './LogoLight';
 import { LogoDark, LogoMarkDark } from './LogoDark';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '../contexts/LanguageContext';
+import { applyPageMeta } from '../seo/applyMeta';
+import { canonicalUrlForPath } from '../seo/pageMeta';
 
 interface FormData {
   nombre: string;
@@ -33,7 +35,7 @@ interface FormData {
 export function LeadCapture() {
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
   const [formData, setFormData] = useState<FormData>({
@@ -58,6 +60,14 @@ export function LeadCapture() {
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    applyPageMeta({
+      title: `${t('leadCapture.title')} | Zuma Solutions`,
+      description: t('leadCapture.subtitle'),
+      canonicalHref: canonicalUrlForPath('/consulta-gratuita'),
+    });
+  }, [t, language]);
 
   /**
    * Turnstile must mount after the step-3 container exists. A single init call often ran while

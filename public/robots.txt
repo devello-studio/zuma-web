@@ -1,3 +1,5 @@
-# Staging: block all crawlers. Update before public launch (e.g. Allow: / and a sitemap).
+# Allow all crawlers.
 User-agent: *
-Disallow: /
+Allow: /
+
+Sitemap: https://www.zumasolutions.io/sitemap.xml

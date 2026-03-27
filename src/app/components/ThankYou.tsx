@@ -5,12 +5,22 @@ import { LogoLight, LogoMarkLight } from './LogoLight';
 import { LogoDark, LogoMarkDark } from './LogoDark';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '../contexts/LanguageContext';
+import { applyPageMeta } from '../seo/applyMeta';
+import { canonicalUrlForPath } from '../seo/pageMeta';
 import { useEffect, useState } from 'react';
 
 export function ThankYou() {
   const { resolvedTheme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [formData, setFormData] = useState<any>(null);
+
+  useEffect(() => {
+    applyPageMeta({
+      title: `${t('thankYou.title')} | Zuma Solutions`,
+      description: t('thankYou.subtitle'),
+      canonicalHref: canonicalUrlForPath('/gracias'),
+    });
+  }, [t, language]);
 
   useEffect(() => {
     // Retrieve form data from sessionStorage
