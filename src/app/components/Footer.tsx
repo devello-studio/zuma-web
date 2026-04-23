@@ -1,10 +1,16 @@
-import { Mail, MapPin } from 'lucide-react';
+import { Mail, MapPin, Phone } from 'lucide-react';
 import { Link } from 'react-router';
 import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
 import { LogoLight, LogoMarkLight } from './LogoLight';
 import { LogoDark, LogoMarkDark } from './LogoDark';
 import { useLanguage } from '../contexts/LanguageContext';
+import {
+  PUBLIC_CONTACT_PHONE_DISPLAY,
+  PUBLIC_CONTACT_PHONE_TEL,
+  PUBLIC_CONTACT_WHATSAPP_URL,
+} from '../constants/publicContact';
+import { WhatsAppGlyph } from './WhatsAppGlyph';
 
 export function Footer() {
   const { resolvedTheme } = useTheme();
@@ -78,14 +84,26 @@ export function Footer() {
                   info@zumasolutions.io
                 </a>
               </li>
-              {/* Phone — uncomment when we have a working number (re-add `Phone` to lucide-react imports above).
               <li className="flex items-start space-x-2">
                 <Phone className="w-4 h-4 mt-1 text-orange-600 dark:text-orange-500 flex-shrink-0" />
-                <a href="tel:+50612345678" className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
-                  +506 1234 5678
+                <a
+                  href={PUBLIC_CONTACT_PHONE_TEL}
+                  className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors"
+                >
+                  {PUBLIC_CONTACT_PHONE_DISPLAY}
                 </a>
               </li>
-              */}
+              <li className="flex items-start space-x-2">
+                <WhatsAppGlyph className="w-4 h-4 mt-1 text-orange-600 dark:text-orange-500 flex-shrink-0" />
+                <a
+                  href={PUBLIC_CONTACT_WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors"
+                >
+                  {t('contact.info.whatsappCta')}
+                </a>
+              </li>
             </ul>
           </div>
         </div>

@@ -90,6 +90,8 @@ const translations: Record<Language, any> = {
       services: 'Servicios',
       about: 'Nosotros',
       contact: 'Contacto',
+      openWhatsapp: 'Abrir WhatsApp',
+      callUs: 'Llamar por teléfono',
     },
     home: {
       hero: {
@@ -268,6 +270,8 @@ const translations: Record<Language, any> = {
         title: 'Información de Contacto',
         email: 'Correo Electrónico',
         phone: 'Teléfono',
+        whatsapp: 'WhatsApp',
+        whatsappCta: 'Escríbenos al WhatsApp',
         location: 'Ubicación',
         locationValue: 'San José, Costa Rica',
       },
@@ -416,6 +420,8 @@ const translations: Record<Language, any> = {
       services: 'Services',
       about: 'About Us',
       contact: 'Contact',
+      openWhatsapp: 'Open WhatsApp',
+      callUs: 'Call by phone',
     },
     home: {
       hero: {
@@ -594,6 +600,8 @@ const translations: Record<Language, any> = {
         title: 'Contact Information',
         email: 'Email',
         phone: 'Phone',
+        whatsapp: 'WhatsApp',
+        whatsappCta: 'Message us on WhatsApp',
         location: 'Location',
         locationValue: 'San José, Costa Rica',
       },

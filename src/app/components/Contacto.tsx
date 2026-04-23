@@ -1,6 +1,12 @@
-import { Mail, MapPin, Send } from 'lucide-react';
+import { Mail, MapPin, Phone, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import {
+  PUBLIC_CONTACT_PHONE_DISPLAY,
+  PUBLIC_CONTACT_PHONE_TEL,
+  PUBLIC_CONTACT_WHATSAPP_URL,
+} from '../constants/publicContact';
+import { WhatsAppGlyph } from './WhatsAppGlyph';
 
 export function Contacto() {
   const { t } = useLanguage();
@@ -191,7 +197,6 @@ export function Contacto() {
                     </a>
                   </div>
                 </div>
-                {/* Phone — uncomment when we have a working number (re-add `Phone` to lucide-react imports above).
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Phone className="w-6 h-6 text-orange-600 dark:text-orange-500" />
@@ -199,14 +204,29 @@ export function Contacto() {
                   <div>
                     <h3 className="text-lg mb-1">{t('contact.info.phone')}</h3>
                     <a
-                      href="tel:+50612345678"
+                      href={PUBLIC_CONTACT_PHONE_TEL}
                       className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors"
                     >
-                      +506 1234 5678
+                      {PUBLIC_CONTACT_PHONE_DISPLAY}
                     </a>
                   </div>
                 </div>
-                */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <WhatsAppGlyph className="w-6 h-6 text-orange-600 dark:text-orange-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg mb-1">{t('contact.info.whatsapp')}</h3>
+                    <a
+                      href={PUBLIC_CONTACT_WHATSAPP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500 transition-colors"
+                    >
+                      {t('contact.info.whatsappCta')}
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
 

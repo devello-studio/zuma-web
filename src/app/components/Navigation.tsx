@@ -1,10 +1,16 @@
 import { Link, useLocation } from 'react-router';
-import { Menu, X, Globe } from 'lucide-react';
+import { Menu, X, Globe, Phone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { LogoLight, LogoMarkLight } from './LogoLight';
 import { LogoDark, LogoMarkDark } from './LogoDark';
 import { useLanguage } from '../contexts/LanguageContext';
+import {
+  PUBLIC_CONTACT_PHONE_DISPLAY,
+  PUBLIC_CONTACT_PHONE_TEL,
+  PUBLIC_CONTACT_WHATSAPP_URL,
+} from '../constants/publicContact';
+import { WhatsAppGlyph } from './WhatsAppGlyph';
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,7 +27,6 @@ export function Navigation() {
     { name: t('nav.home'), path: '/' },
     { name: t('nav.services'), path: '/servicios' },
     { name: t('nav.about'), path: '/nosotros' },
-    { name: t('nav.contact'), path: '/contacto' },
   ];
 
   const isActive = (path: string) => {
@@ -31,6 +36,9 @@ export function Navigation() {
   const toggleLanguage = () => {
     setLanguage(language === 'es_CR' ? 'en_US' : 'es_CR');
   };
+
+  const contactIconClass =
+    'p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-500';
 
   return (
     <nav className="sticky top-0 z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
@@ -66,7 +74,28 @@ export function Navigation() {
                 {link.name}
               </Link>
             ))}
-            
+
+            <div className="flex items-center space-x-2">
+              <a
+                href={PUBLIC_CONTACT_WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={contactIconClass}
+                aria-label={t('nav.openWhatsapp')}
+                title={t('nav.openWhatsapp')}
+              >
+                <WhatsAppGlyph className="w-5 h-5" />
+              </a>
+              <a
+                href={PUBLIC_CONTACT_PHONE_TEL}
+                className={contactIconClass}
+                aria-label={t('nav.callUs')}
+                title={PUBLIC_CONTACT_PHONE_DISPLAY}
+              >
+                <Phone className="w-5 h-5" />
+              </a>
+            </div>
+
             {/* Language Toggle */}
             {mounted && (
               <button
@@ -82,7 +111,23 @@ export function Navigation() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-4">
+          <div className="md:hidden flex items-center space-x-2">
+            <a
+              href={PUBLIC_CONTACT_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={contactIconClass}
+              aria-label={t('nav.openWhatsapp')}
+            >
+              <WhatsAppGlyph className="w-4 h-4" />
+            </a>
+            <a
+              href={PUBLIC_CONTACT_PHONE_TEL}
+              className={contactIconClass}
+              aria-label={t('nav.callUs')}
+            >
+              <Phone className="w-4 h-4" />
+            </a>
             {mounted && (
               <button
                 onClick={toggleLanguage}
